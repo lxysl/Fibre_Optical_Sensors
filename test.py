@@ -24,5 +24,5 @@ def test_one_epoch(model, dataloader, criterion_position, criterion_force, devic
 
     # 计算整个 epoch 的平均损失
     epoch_loss = running_loss / total_batches
-    print(f'Test Epoch Loss: {epoch_loss:.3f}')
+    print(f'Test Epoch Loss: {epoch_loss:.10f}')
     return epoch_loss

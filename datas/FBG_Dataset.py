@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-
+import numpy as np
 
 # 创建自定义数据集
 class FBGDataset(Dataset):
@@ -17,6 +17,18 @@ class FBGDataset(Dataset):
         y_position = self.y_position_tensor[idx]
         y_force = self.y_force_tensor[idx]
         return x, y_position, y_force
+    
+def z_score_normalize_samplewise(data):
+    means = np.mean(data, axis=1, keepdims=True)  # 每个样本的均值
+    stds = np.std(data, axis=1, keepdims=True)    # 每个样本的标准差
+    return (data - means) / stds
+
+# Min-Max归一化函数
+def min_max_normalize(data, min_val, max_val):
+    return (data - min_val) / (max_val - min_val)
+
+def min_max_denormalize(norm_data, min_val, max_val):
+    return norm_data * (max_val - min_val) + min_val
 
 
 if __name__ == '__main__':
