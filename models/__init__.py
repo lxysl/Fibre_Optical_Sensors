@@ -1,1 +1,1 @@
-from .FBG_Net import FBGNet
+from .FBG_Net import FBGNet, FBGLSTMModel

@@ -41,9 +41,38 @@ class FBGNet(nn.Module):
         force_output = self.fc_force(x)  # (batch_size, 1)
         return position_output, force_output
 
+# 定义LSTM模型
+class FBGLSTMModel(nn.Module):
+    def __init__(self, input_size = 2000, hidden_size = 128, num_layers = 2, output_size = 24):
+        super(FBGLSTMModel, self).__init__()
+        
+        # 定义LSTM层
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        
+        # 定义全连接层，用于输出力的位置（24个位置）和力的大小
+        self.fc_position = nn.Linear(hidden_size, 24)  # 输出24个位置
+        self.fc_force = nn.Linear(hidden_size, 1)  # 输出1个力的大小
+    
+    def forward(self, x):
+        # LSTM输入x的形状为 (batch_size, seq_length, input_size) = (batch_size, 2000, 1)
+        x = x.unsqueeze(-1)
+        # LSTM前向传播
+        lstm_out, _ = self.lstm(x)  # lstm_out: [batch_size, seq_length, hidden_size]
+        
+        # 我们只取LSTM最后一个时间步的输出
+        lstm_out = lstm_out[:, -1, :]  # lstm_out: [batch_size, hidden_size]
+        
+        # 通过全连接层进行位置和力的预测
+        position_output = self.fc_position(lstm_out)  # 预测24个位置的概率分布
+        force_output = self.fc_force(lstm_out)  # 预测力的大小
+        
+        return position_output, force_output
+    
+
+
 if __name__ == '__main__':
-    model = FBGNet()
+    model = FBGLSTMModel()
 
     print(model)
     from torchinfo import summary
-    summary(model, input_size=(10, 2000))  # do a test pass through of an example input size
+    summary(model, input_size=(10, 21,2000))  # do a test pass through of an example input size

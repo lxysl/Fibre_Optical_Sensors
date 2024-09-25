@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from datas import FBGDataset, z_score_normalize_samplewise, min_max_normalize
-from models import FBGNet
+from models import FBGNet , FBGLSTMModel
 from config import MODEL_SAVE_DIR, NUM_EPOCHS
 from train import train_one_epoch
 from test import test_one_epoch
@@ -17,7 +17,7 @@ from utils import test_model
 # start a new wandb run to track this script
 wandb.init(
     project="Fibre_Optical_sensors",
-    notes="归一化了数据和力,600次迭代",
+    notes="归一化了数据和力,600次迭代,加LSTM",
     config={
         "num_epochs": NUM_EPOCHS,
         "checkpoint_path": MODEL_SAVE_DIR,
@@ -81,7 +81,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     # 实例化模型
-    model = FBGNet().to(device)
+    model = FBGLSTMModel().to(device)
     # 损失函数和优化器
     criterion_position = nn.CrossEntropyLoss()  # 位置的分类损失
     criterion_force = nn.MSELoss()  # 力的大小的回归损失
