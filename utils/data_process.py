@@ -1,38 +1,74 @@
 import os
-import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-# 文件夹路径
-folder_path = 'Spectrum Data-20240918'  # 修改为实际路径
 
-# 获取所有文件名并按照自然顺序排序
-file_list = sorted([f for f in os.listdir(folder_path) if f.endswith(".dat")])
 
-# 用于存储所有文件的CH3列和Wavelength列
-data_frames = []
 
-# 遍历文件夹中的所有.dat文件
-for i, filename in enumerate(file_list):
-    # 构造完整的文件路径
-    file_path = os.path.join(folder_path, filename)
+def append_array_to_txt(filename, array, delimiter=',', fmt='%.2f'):
     
-    # 读取文件并跳过第一行的列名（因为没有合适的分隔符，我们手动命名列）
-    col_names = ['Wavelength', 'CH1', 'CH2', 'CH3', 'CH4', 'CH5', 'CH6', 'CH7', 'CH8']
-    data = pd.read_csv(file_path, sep='\s+', names=col_names, skiprows=2)
+    with open(filename, 'a') as f:
+        np.savetxt(f, array, fmt=fmt, delimiter=delimiter)
 
-    # 提取 Wavelength 和 CH3 列，并重命名 CH3 列为独特的名字
-    df = data[['Wavelength', 'CH1']].copy()
-    df.columns = ['Wavelength', f'CH1_File_{i+1}']
-    
-    # 将每个文件的数据存入data_frames列表
-    data_frames.append(df)
 
-# 合并所有文件的数据，按列合并（基于Wavelength）
-all_data = data_frames[0]  # 第一个文件的数据作为基础
-for df in data_frames[1:]:
-    all_data = pd.merge(all_data, df, on='Wavelength', how='outer')
+def write_data_to_txt(file_list, txt_name, folder_path):
+    for i, filename in enumerate(file_list):
+        # 构造完整的文件路径
+        file_path = os.path.join(folder_path, filename)
+        open_file = open(file_path, 'r')
+        lines = open_file.readlines()
+        data = np.zeros((2,2000))
+        for i in range(2000):
+            data[0,i] , data[1,i] = lines[i+2].split('\t')[2:4]
+        append_array_to_txt(txt_name, data)
 
-# 将结果写入Excel文件
-output_path = 'Data_Sets/output_noise_new.xlsx'  # 修改为实际输出路径
-all_data.to_excel(output_path, index=False)
 
-print(f"数据已成功写入 {output_path}")
+def ckeck_peaks(file_list, folder_path):
+    '检查ch2为4个峰 ch3为3个峰'
+    x = np.linspace(0, 2000, 2000)
+    for i, filename in enumerate(file_list):
+        # 构造完整的文件路径
+        file_path = os.path.join(folder_path, filename)
+        open_file = open(file_path, 'r')
+        lines = open_file.readlines()
+        data = np.zeros((2,2000))
+        for i in range(2000):
+            data[0,i] , data[1,i] = lines[i+2].split('\t')[2:4]
+        plt.plot(x, data[0,:], label='ch2', color='r')
+        plt.plot(x, data[1,:], label='ch3', color='b')
+        plt.legend()
+        plt.show()
+        break
+
+# txt_name = 'data.txt'
+# folder_path = '../Data_sets/Fiber_7points/bei30/Spectrum Data-20240930'  # 修改为实际路径
+# file_list = sorted([f for f in os.listdir(folder_path) if f.endswith(".dat")])
+        
+array = np.empty((384, 3))
+for i in range(0, 24):
+    for j in range(0, 16):
+        new_data = [0, i, j]
+        array[i * 16 + j] = new_data
+y = array
+append_array_to_txt('lable.txt', y, delimiter=',', fmt='%.2f')
+for _ in range(0,25):
+    array = np.empty((384, 3))
+    for i in range(0, 24):
+        for j in range(0, 16):
+            new_data = [ _ , i, j]
+            array[i * 16 + j] = new_data
+    y = array
+    append_array_to_txt('lable.txt', y, delimiter=',', fmt='%.2f')
+
+data = np.loadtxt('lable.txt', delimiter=',')
+print(data.shape)
+
+def main():
+    # print(len(file_list))
+    # write_data_to_txt(file_list, txt_name, folder_path)
+    # ckeck_peaks(file_list, folder_path)
+    pass
+
+
+if __name__ == '__main__':
+    main()

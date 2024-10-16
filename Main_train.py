@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from datas import FBGDataset, z_score_normalize_samplewise, min_max_normalize
-from models import FBGNet , FBGLSTMModel
+from models import FBGNet , MultiTaskTransformer
 from config import MODEL_SAVE_DIR, NUM_EPOCHS
 from train import train_one_epoch
 from test import test_one_epoch
@@ -42,36 +42,28 @@ def config_params():
     args = parser.parse_args()
     return args
 
-# 读取excel文件
-file_path = "Data_Sets/output_noise_new.xlsx"
-df = pd.read_excel(file_path)
-numpy_array = df.to_numpy().T
-x = numpy_array[1:, :]
-# 对每个样本进行Z-score标准化
-normalized_data_x = z_score_normalize_samplewise(x)
 
 
-# 生成y
-array = np.empty((504, 2))
-for i in range(0, 24):
-    for j in range(0, 21):
-        new_data = [i, j]
-        array[i * 21 + j] = new_data
-y = array
-# 对力的大小进行归一化
-normalized_forces = min_max_normalize(y[:, 1], 0, 20)
+x_data = np.loadtxt('data.txt', delimiter=',')  # (19968, 2000)
+# 步骤1：重塑数组
+x_data = x_data.reshape(9984, 2, 2000)
+# 步骤2：调整轴的顺序
+normalized_data_x = np.transpose(x_data, (0, 2, 1))
+
+y = np.loadtxt('label.txt', delimiter=',')  # (9984, 3)
 
 # 假设 x 和 y 是 numpy 数组，需要转换为 PyTorch 的张量
 x_tensor = torch.from_numpy(normalized_data_x).float()  # 输入数据
-y_position_tensor = torch.from_numpy(y[:, 0]).long()
-y_force_tensor = torch.from_numpy(normalized_forces).float()
+y_direction_tensor = torch.from_numpy(y[:, 0]).long()
+y_position_tensor = torch.from_numpy(y[:, 1]).long()
+y_force_tensor = torch.from_numpy(y[:,2]).float()
 
 
 def main():
     arg = config_params()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # 创建数据集实例
-    fbg_dataset = FBGDataset(x_tensor, y_position_tensor, y_force_tensor)
+    fbg_dataset = FBGDataset(x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor)
     # 设定划分比例，例如 80% 训练集，20% 测试集
     train_size = int(0.8 * len(fbg_dataset))
     test_size = len(fbg_dataset) - train_size
@@ -81,7 +73,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     # 实例化模型
-    model = FBGLSTMModel().to(device)
+    model = MultiTaskTransformer(input_dim = 2, num_classes = 21).to(device)
     # 损失函数和优化器
     criterion_position = nn.CrossEntropyLoss()  # 位置的分类损失
     criterion_force = nn.MSELoss()  # 力的大小的回归损失

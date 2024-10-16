@@ -166,3 +166,4 @@ optical_fiber_checkpoints/
 wandb/
 Data_Sets/
 utils/graph.ipynb
+.DS_store

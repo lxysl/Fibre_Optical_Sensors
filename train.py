@@ -15,16 +15,17 @@ def train_one_epoch(model, dataloader, criterion_position, criterion_force, opti
 
     # 遍历数据集的每一个批次
     for i, data in enumerate(dataloader, 0):
-        inputs, labels_position, labels_force = data
-        inputs, labels_position, labels_force = inputs.to(device), labels_position.to(device), labels_force.to(device)
+        inputs, labels_direction, labels_position, labels_force = data
+        inputs, labels_direction, labels_position, labels_force = inputs.to(device), labels_direction.to(device), labels_position.to(device), labels_force.to(device)
         # 重置梯度
         optimizer.zero_grad()
         # 前向传播
-        outputs_position, outputs_force = model(inputs)
+        outputs_direction, outputs_position, outputs_force = model(inputs)
         # 计算损失
+        loss_direction = criterion_position(outputs_direction, labels_direction)
         loss_position = criterion_position(outputs_position, labels_position)
         loss_force = criterion_force(outputs_force.squeeze(), labels_force)
-        loss = loss_position + loss_force
+        loss = loss_position + loss_force + loss_direction
         # 反向传播和优化
         loss.backward()
         optimizer.step()

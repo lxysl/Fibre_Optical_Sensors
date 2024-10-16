@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -41,38 +42,96 @@ class FBGNet(nn.Module):
         force_output = self.fc_force(x)  # (batch_size, 1)
         return position_output, force_output
 
-# 定义LSTM模型
-class FBGLSTMModel(nn.Module):
-    def __init__(self, input_size = 2000, hidden_size = 128, num_layers = 2, output_size = 24):
-        super(FBGLSTMModel, self).__init__()
-        
-        # 定义LSTM层
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        
-        # 定义全连接层，用于输出力的位置（24个位置）和力的大小
-        self.fc_position = nn.Linear(hidden_size, 24)  # 输出24个位置
-        self.fc_force = nn.Linear(hidden_size, 1)  # 输出1个力的大小
-    
+class PositionalEncoding(nn.Module):
+    r"""Inject some information about the relative or absolute position of the tokens in the sequence.
+        The positional encodings have the same dimension as the embeddings, so that the two can be summed.
+        Here, we use sine and cosine functions of different frequencies.
+    .. math:
+        \text{PosEncoder}(pos, 2i) = sin(pos/10000^(2i/d_model))
+        \text{PosEncoder}(pos, 2i+1) = cos(pos/10000^(2i/d_model))
+        \text{where pos is the word position and i is the embed idx)
+    Args:
+        d_model: the embed dim (required).
+        dropout: the dropout value (default=0.1).
+        max_len: the max. length of the incoming sequence (default=5000).
+    Examples:
+        >>> pos_encoder = PositionalEncoding(d_model)
+    """
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
     def forward(self, x):
-        # LSTM输入x的形状为 (batch_size, seq_length, input_size) = (batch_size, 2000, 1)
-        x = x.unsqueeze(-1)
-        # LSTM前向传播
-        lstm_out, _ = self.lstm(x)  # lstm_out: [batch_size, seq_length, hidden_size]
-        
-        # 我们只取LSTM最后一个时间步的输出
-        lstm_out = lstm_out[:, -1, :]  # lstm_out: [batch_size, hidden_size]
-        
-        # 通过全连接层进行位置和力的预测
-        position_output = self.fc_position(lstm_out)  # 预测24个位置的概率分布
-        force_output = self.fc_force(lstm_out)  # 预测力的大小
-        
-        return position_output, force_output
+        r"""Inputs of forward function
+        Args:
+            x: the sequence fed to the positional encoder model (required).
+        Shape:
+            x: [sequence length, batch size, embed dim]
+            output: [sequence length, batch size, embed dim]
+        Examples:
+            >>> output = pos_encoder(x)
+        """
+
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
     
+class MultiTaskTransformer(nn.Module):
+    def __init__(self, input_dim=2, d_model=64, nhead=4, num_layers=2, num_classes_1= 25, num_classes_2= 24):
+        super().__init__()
+        self.input_proj = nn.Linear(input_dim, d_model)
+        self.pos_encoder = PositionalEncoding(d_model)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.classification_head_1 = nn.Linear(d_model, num_classes_1)
+        self.classification_head_2 = nn.Linear(d_model, num_classes_2)
+        self.regression_head = nn.Linear(d_model, 1)
+
+    def forward(self, src):
+        # src shape: (batch_size, seq_len, input_dim)
+        src = self.input_proj(src)  # (seq_len, batch_size, d_model)
+        src = src.permute(1, 0, 2)  # (seq_len, batch_size, input_dim)
+        src = self.pos_encoder(src)
+        src = src.permute(1, 0, 2)  # (batch_size, seq_len, d_model)
+        output = self.transformer_encoder(src)
+        
+        # Global average pooling
+        output = output.mean(dim = 1)  # (batch_size, d_model)
+        
+        # Classification task
+        direction_output = self.classification_head_1(output)
+        position_output = self.classification_head_2(output)
+        
+        # Regression task
+        reg_output = self.regression_head(output).squeeze(-1)
+        
+        return direction_output, position_output, reg_output
+
+
 
 
 if __name__ == '__main__':
-    model = FBGLSTMModel()
+    
 
-    print(model)
-    from torchinfo import summary
-    summary(model, input_size=(10, 21,2000))  # do a test pass through of an example input size
+    input_dim = 2
+    num_classes = 5  # 假设有5个类别
+
+    model = MultiTaskTransformer(input_dim = input_dim)
+    x = torch.randn(32, 2000, 2)
+    direction_output, position_output, reg_pred = model(x)
+
+    print(f"Classification output shape: {direction_output.shape}")
+    print(f"Regression output shape: {position_output.shape}")
+    print(f"Regression output shape: {reg_pred.shape}")
+
+    # # print(model)
+    # from torchinfo import summary
+    # summary(model, input_size=(32, 2000, 2))  # do a test pass through of an example input size

@@ -1,1 +1,1 @@
-from .FBG_Net import FBGNet, FBGLSTMModel
+from .FBG_Net import FBGNet,  PositionalEncoding, MultiTaskTransformer
