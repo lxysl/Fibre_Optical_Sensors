@@ -17,7 +17,7 @@ def test_one_epoch(model, dataloader, criterion_position, criterion_force, devic
             loss_direction = criterion_position(outputs_direction, labels_direction)
             loss_position = criterion_position(outputs_position, labels_position)
             loss_force = criterion_force(outputs_force.squeeze(), labels_force)
-            loss = loss_position + loss_force + loss_direction
+            loss = 0.5 * loss_direction + 0.6 * loss_position + 0.9 * loss_force
 
             # 累计损失
             running_loss += loss.item()

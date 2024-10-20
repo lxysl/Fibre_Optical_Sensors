@@ -13,7 +13,9 @@ from config import MODEL_SAVE_DIR, NUM_EPOCHS
 from train import train_one_epoch
 from test import test_one_epoch
 from utils import test_model
+from matplotlib import pyplot as plt
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '1,2,3'
 # start a new wandb run to track this script
 wandb.init(
     project="Fibre_Optical_sensors",
@@ -44,11 +46,12 @@ def config_params():
 
 
 
-x_data = np.loadtxt('data.txt', delimiter=',')  # (19968, 2000)
+x_data = np.loadtxt('Data_sets/data.txt', delimiter=',')  # (19968, 2000)
 # 步骤1：重塑数组
 x_data = x_data.reshape(9984, 2, 2000)
 # 步骤2：调整轴的顺序
 normalized_data_x = np.transpose(x_data, (0, 2, 1))
+normalized_data_x = z_score_normalize_samplewise(normalized_data_x)
 
 y = np.loadtxt('label.txt', delimiter=',')  # (9984, 3)
 
@@ -73,7 +76,9 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     # 实例化模型
-    model = MultiTaskTransformer(input_dim = 2, num_classes = 21).to(device)
+    model = MultiTaskTransformer(input_dim = 2)
+    model = nn.DataParallel(model)
+    model.to(device)
     # 损失函数和优化器
     criterion_position = nn.CrossEntropyLoss()  # 位置的分类损失
     criterion_force = nn.MSELoss()  # 力的大小的回归损失

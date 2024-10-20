@@ -85,16 +85,35 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
     
 class MultiTaskTransformer(nn.Module):
-    def __init__(self, input_dim=2, d_model=64, nhead=4, num_layers=2, num_classes_1= 25, num_classes_2= 24):
+    def __init__(self, input_dim=2, d_model=64, nhead=4, num_layers=2, num_classes_1= 25, num_classes_2= 24, dropout=0.1):
         super().__init__()
         self.input_proj = nn.Linear(input_dim, d_model)
         self.pos_encoder = PositionalEncoding(d_model)
         encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.classification_head_1 = nn.Linear(d_model, num_classes_1)
-        self.classification_head_2 = nn.Linear(d_model, num_classes_2)
-        self.regression_head = nn.Linear(d_model, 1)
+        # 一维卷积层
+        self.conv1 = nn.Conv1d(in_channels=64, out_channels=128, kernel_size=5)
+        self.conv2 = nn.Conv1d(in_channels=128, out_channels=256, kernel_size=5)
+        # 池化层
+        self.pool = nn.MaxPool1d(kernel_size=2)
+        # 全连接层
+        self.fc1 = nn.Linear(64 * 497, 128)  # 64个通道，每个通道497个特征点
+        # 输出层
 
+        self.classification_head_1 = nn.Sequential(
+        nn.Dropout(p=dropout),  # Add dropout before classification head
+        nn.Linear(497, num_classes_1)
+    )
+
+        self.classification_head_2 = nn.Sequential(
+        nn.Dropout(p=dropout),  # Add dropout before classification head
+        nn.Linear(497, num_classes_2)
+    )
+
+        self.regression_head = nn.Sequential(
+        nn.Dropout(p=dropout),  # Add dropout before regression head
+        nn.Linear(497, 1)
+    )
     def forward(self, src):
         # src shape: (batch_size, seq_len, input_dim)
         src = self.input_proj(src)  # (seq_len, batch_size, d_model)
@@ -102,9 +121,11 @@ class MultiTaskTransformer(nn.Module):
         src = self.pos_encoder(src)
         src = src.permute(1, 0, 2)  # (batch_size, seq_len, d_model)
         output = self.transformer_encoder(src)
-        
+        output = output.permute(0, 2, 1) # (batch_size, d_model, seq_len)
+        output = self.pool(F.relu(self.conv1(output)))  # (batch_size, 128, 998)
+        output = self.pool(F.relu(self.conv2(output)))  # (batch_size, 256, 497)
         # Global average pooling
-        output = output.mean(dim = 1)  # (batch_size, d_model)
+        output = output.mean(dim = 1)  # (batch_size, 497)
         
         # Classification task
         direction_output = self.classification_head_1(output)
@@ -132,6 +153,6 @@ if __name__ == '__main__':
     print(f"Regression output shape: {position_output.shape}")
     print(f"Regression output shape: {reg_pred.shape}")
 
-    # # print(model)
-    # from torchinfo import summary
-    # summary(model, input_size=(32, 2000, 2))  # do a test pass through of an example input size
+    # print(model)
+    from torchinfo import summary
+    summary(model, input_size=(32, 2000, 2))  # do a test pass through of an example input size

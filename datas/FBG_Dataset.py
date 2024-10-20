@@ -21,8 +21,10 @@ class FBGDataset(Dataset):
         return x, y_direction, y_position, y_force
     
 def z_score_normalize_samplewise(data):
-    means = np.mean(data, axis=1, keepdims=True)  # 每个样本的均值
-    stds = np.std(data, axis=1, keepdims=True)    # 每个样本的标准差
+    means = np.mean(data, axis=1,keepdims = True)  # 每个样本的均值
+    print(means.shape)
+    stds = np.std(data, axis=1,keepdims = True)    # 每个样本的标准差
+    print(stds.shape)
     return (data - means) / stds
 
 # Min-Max归一化函数
