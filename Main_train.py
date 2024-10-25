@@ -75,7 +75,7 @@ def main():
     train_size = int(0.8 * len(fbg_dataset))
     test_size = len(fbg_dataset) - train_size
     # 使用 random_split 进行数据集划分
-    train_dataset, test_dataset = random_split(fbg_dataset, [train_size, test_size])
+    train_dataset, test_dataset = random_split(fbg_dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
     # 使用 DataLoader 创建数据加载器
     train_dataloader = DataLoader(train_dataset, batch_size=196, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=196, shuffle=False)
@@ -87,7 +87,7 @@ def main():
     torch.compile(model)
     # 损失函数和优化器
     criterion_position = nn.CrossEntropyLoss()  # 位置的分类损失
-    criterion_force = nn.MSELoss()  # 力的大小的回归损失
+    criterion_force = nn.SmoothL1Loss()  # 力的大小的回归损失
     optimizer = optim.AdamW(model.parameters(), lr=0.001)
     decay_rate = 0.2
     decay_steps = [70, 140]

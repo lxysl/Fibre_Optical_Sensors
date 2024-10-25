@@ -2,6 +2,34 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
+
+class Jitter:
+    def __init__(self, sigma=0.2):
+        self.sigma = sigma
+
+    def __call__(self, x):
+        return x + np.random.normal(loc=0., scale=self.sigma, size=x.shape)
+
+
+class Scaling:
+    def __init__(self, sigma=0.01):
+        self.sigma = sigma
+
+    def __call__(self, x):
+        factor = np.random.normal(loc=1., scale=self.sigma, size=x.shape)
+        return np.multiply(x, factor)
+
+
+class ComposeTransform:
+    def __init__(self, transforms):
+        self.transforms = transforms
+
+    def __call__(self, x):
+        for t in self.transforms:
+            x = t(x)
+        return x.float()
+
+
 # 创建自定义数据集
 class FBGDataset(Dataset):
     def __init__(self, x_tensor, y_direction_tensor ,y_position_tensor, y_force_tensor):
@@ -15,6 +43,7 @@ class FBGDataset(Dataset):
 
     def __getitem__(self, idx):
         x = self.x_tensor[idx]
+        x = ComposeTransform([Jitter(0.1), Scaling(0.01)])(x)
         y_direction = self.y_direction_tensor[idx]
         y_position = self.y_position_tensor[idx]
         y_force = self.y_force_tensor[idx]
@@ -22,9 +51,9 @@ class FBGDataset(Dataset):
     
 def z_score_normalize_samplewise(data):
     means = np.mean(data, axis=1,keepdims = True)  # 每个样本的均值
-    print(means.shape)
+    # print(means.shape)
     stds = np.std(data, axis=1,keepdims = True)    # 每个样本的标准差
-    print(stds.shape)
+    # print(stds.shape)
     return (data - means) / stds
 
 # Min-Max归一化函数

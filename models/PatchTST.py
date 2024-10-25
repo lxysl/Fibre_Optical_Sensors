@@ -23,6 +23,8 @@ CONFIGS = {
     "dropout": 0.2,
     "fc_dropout": 0.2,
     "head_dropout": 0.1,
+    "mlp_dropout": 0.1,
+    "mlp_dim": 128,
     "individual": False,
     "patch_len": 16,
     "stride": 8,
@@ -36,7 +38,7 @@ CONFIGS = {
 
 
 class PatchTST(nn.Module):
-    def __init__(self, num_classes_1, num_classes_2, configs, max_seq_len:Optional[int]=1024, d_k:Optional[int]=None, d_v:Optional[int]=None, norm:str='BatchNorm', attn_dropout:float=0., 
+    def __init__(self, num_classes_1, num_classes_2, configs, max_seq_len:Optional[int]=2048, d_k:Optional[int]=None, d_v:Optional[int]=None, norm:str='BatchNorm', attn_dropout:float=0., 
                  act:str="gelu", key_padding_mask:bool='auto',padding_var:Optional[int]=None, attn_mask:Optional[Tensor]=None, res_attention:bool=True, 
                  pre_norm:bool=False, store_attn:bool=False, pe:str='zeros', learn_pe:bool=True, pretrain_head:bool=False, head_type = 'flatten', verbose:bool=False, **kwargs):
         
@@ -54,7 +56,8 @@ class PatchTST(nn.Module):
         dropout = configs['dropout']
         fc_dropout = configs['fc_dropout']
         head_dropout = configs['head_dropout']
-        
+        mlp_dropout = configs['mlp_dropout']
+        mlp_dim = configs['mlp_dim']
         individual = configs['individual']
     
         patch_len = configs['patch_len']
@@ -101,23 +104,26 @@ class PatchTST(nn.Module):
         
         self.classification_head_1 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(c_in * target_window, 128),
-            nn.SiLU(),
-            nn.Linear(128, num_classes_1)
+            nn.Linear(c_in * target_window, mlp_dim),
+            nn.GELU(),
+            nn.Dropout(mlp_dropout),
+            nn.Linear(mlp_dim, num_classes_1)
         )
 
         self.classification_head_2 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(c_in * target_window, 128),
-            nn.SiLU(),
-            nn.Linear(128, num_classes_2)
+            nn.Linear(c_in * target_window, mlp_dim),
+            nn.GELU(),
+            nn.Dropout(mlp_dropout),
+            nn.Linear(mlp_dim, num_classes_2)
         )
 
         self.regression_head = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(c_in * target_window, 128),
-            nn.SiLU(),
-            nn.Linear(128, 1)
+            nn.Linear(c_in * target_window, mlp_dim),
+            nn.GELU(),
+            nn.Dropout(mlp_dropout),
+            nn.Linear(mlp_dim, 1)
         )
     
     
@@ -136,5 +142,5 @@ class PatchTST(nn.Module):
         
         classification_output_1 = self.classification_head_1(x)
         classification_output_2 = self.classification_head_2(x)
-        regression_output = self.regression_head(x)
+        regression_output = self.regression_head(x).squeeze(-1)
         return classification_output_1, classification_output_2, regression_output

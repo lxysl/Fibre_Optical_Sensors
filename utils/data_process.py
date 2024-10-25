@@ -60,9 +60,15 @@ for _ in range(0,25):
     y = array
     append_array_to_txt('lable.txt', y, delimiter=',', fmt='%.2f')
 
-data = np.loadtxt('lable.txt', delimiter=',')
-print(data.shape)
-
+data = np.loadtxt('../Data_sets/data.txt', delimiter=',')
+data = data.reshape(-1, 2, 2000)
+ch2_x = data[768,0,:]
+ch3_x = data[768,1,:]
+y = np.linspace(0, 2000, 2000)
+plt.plot(y, ch2_x, label='ch2', color='r')
+plt.plot(y, ch3_x, label='ch3', color='b')
+plt.legend()
+plt.savefig('data.png')
 def main():
     # print(len(file_list))
     # write_data_to_txt(file_list, txt_name, folder_path)

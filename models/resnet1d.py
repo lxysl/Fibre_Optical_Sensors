@@ -280,7 +280,7 @@ class ResNet1D(nn.Module):
         # out = self.do(out)
         out_1 = self.classification_head_1(out)
         out_2 = self.classification_head_2(out)
-        out_reg = self.regression_head(out)
+        out_reg = self.regression_head(out).squeeze(-1)
         if self.verbose:
             print('classification_head_1', out_1.shape)
             print('classification_head_2', out_2.shape)
