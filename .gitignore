@@ -1,8 +1,3 @@
-Data_sets/data.txt
-Data_sets/label.txt
-Data_sets/test_data.txt
-Data_sets/test_label.txt
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -172,3 +167,10 @@ wandb/
 Data_Sets/
 utils/graph.ipynb
 .DS_store
+
+Data_sets/data.txt
+Data_sets/label.txt
+Data_sets/test_data.txt
+Data_sets/test_label.txt
+
+.vscode

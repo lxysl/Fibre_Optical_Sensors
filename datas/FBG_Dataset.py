@@ -32,18 +32,20 @@ class ComposeTransform:
 
 # 创建自定义数据集
 class FBGDataset(Dataset):
-    def __init__(self, x_tensor, y_direction_tensor ,y_position_tensor, y_force_tensor):
+    def __init__(self, x_tensor, y_direction_tensor ,y_position_tensor, y_force_tensor, train=True):
         self.x_tensor = x_tensor
         self.y_direction_tensor = y_direction_tensor
         self.y_position_tensor = y_position_tensor
         self.y_force_tensor = y_force_tensor
+        self.train = train
 
     def __len__(self):
         return len(self.x_tensor)
 
     def __getitem__(self, idx):
         x = self.x_tensor[idx]
-        x = ComposeTransform([Jitter(0.1), Scaling(0.01)])(x)
+        if self.train:
+            x = ComposeTransform([Jitter(0.1), Scaling(0.01)])(x)
         y_direction = self.y_direction_tensor[idx]
         y_position = self.y_position_tensor[idx]
         y_force = self.y_force_tensor[idx]

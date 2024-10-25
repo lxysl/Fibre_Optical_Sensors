@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from sklearn.model_selection import train_test_split
+from matplotlib import pyplot as plt
 
 from datas import FBGDataset, z_score_normalize_samplewise, min_max_normalize
 from models import FBGNet , MultiTaskTransformer, ResNet1D, PatchTST, CONFIGS
@@ -15,14 +16,13 @@ from config import MODEL_SAVE_DIR, NUM_EPOCHS
 from train import train_one_epoch
 from test import test_one_epoch
 from utils import test_model
-from matplotlib import pyplot as plt
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1,2,3'
 # start a new wandb run to track this script
 wandb.init(
     project="Fibre_Optical_sensors",
     entity="chengjun_team",
-    notes="patchtst",
+    notes="train-test-split-augmentation",
     config={
         "num_epochs": NUM_EPOCHS,
         "checkpoint_path": MODEL_SAVE_DIR,
@@ -64,21 +64,19 @@ x_tensor = torch.from_numpy(normalized_data_x).float()  # 输入数据
 y_direction_tensor = torch.from_numpy(y[:, 0]).long()
 y_position_tensor = torch.from_numpy(y[:, 1]).long()
 y_force_tensor = torch.from_numpy(y[:,2]).float()
-
+# train test split
+x_train, x_test, y_direction_train, y_direction_test, y_position_train, y_position_test, y_force_train, y_force_test = train_test_split(
+    x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor, test_size=0.2, random_state=42)
 
 def main():
     arg = config_params()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # 创建数据集实例
-    fbg_dataset = FBGDataset(x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor)
-    # 设定划分比例，例如 80% 训练集，20% 测试集
-    train_size = int(0.8 * len(fbg_dataset))
-    test_size = len(fbg_dataset) - train_size
-    # 使用 random_split 进行数据集划分
-    train_dataset, test_dataset = random_split(fbg_dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
+    fbg_train_dataset = FBGDataset(x_train, y_direction_train, y_position_train, y_force_train, train=True)
+    fbg_test_dataset = FBGDataset(x_test, y_direction_test, y_position_test, y_force_test, train=False)
     # 使用 DataLoader 创建数据加载器
-    train_dataloader = DataLoader(train_dataset, batch_size=196, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=196, shuffle=False)
+    train_dataloader = DataLoader(fbg_train_dataset, batch_size=196, shuffle=True)
+    test_dataloader = DataLoader(fbg_test_dataset, batch_size=196, shuffle=False)
     # 实例化模型
     # model = MultiTaskTransformer(input_dim = 2)
     # model = ResNet1D(in_channels=2, base_filters=64, kernel_size=7, stride=3, groups=1, n_block=8, n_classes_1=25, n_classes_2=24)
