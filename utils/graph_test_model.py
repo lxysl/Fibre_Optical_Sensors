@@ -5,6 +5,10 @@ from torch.utils.data import DataLoader, random_split
 from models import FBGNet , MultiTaskTransformer
 from datas.FBG_Dataset import min_max_denormalize
 from datas import FBGDataset, z_score_normalize_samplewise, min_max_normalize
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+import wandb
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -30,6 +34,17 @@ model = MultiTaskTransformer(input_dim = 2)
 model = nn.DataParallel(model)
 model.to('cuda')
 
+def plot_confusion_matrix(y_true, y_pred, title):
+    y_true = y_true.detach().cpu().numpy()
+    y_pred = y_pred.detach().cpu().numpy()
+    cm = confusion_matrix(y_true, y_pred)
+    fig, ax = plt.subplots(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=range(cm.shape[1]), yticklabels=range(cm.shape[0]))
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title(title)
+    return fig
+
 def test_model(data_loader, model, model_path):
         for batch_idx, (inputs, label_direction, labels_position, labels_force) in enumerate(data_loader):
             print(f"Batch {batch_idx + 1}:")
@@ -50,6 +65,13 @@ def test_model(data_loader, model, model_path):
             # print("Real_Labels (Force):", labels_force)
             # print("Predicted force:", force_output)
             print('Real_Labels - Predicted force:' ,labels_force.to('cuda') - force_output)
+            direction_cm = plot_confusion_matrix(label_direction, torch.argmax(direction_output, dim=1), 'Direction Confusion Matrix')
+            position_cm = plot_confusion_matrix(labels_position, torch.argmax(position_output, dim=1), 'Position Confusion Matrix')
+            # upload to wandb
+            wandb.log({
+                "direction_cm": wandb.Image(direction_cm),
+                "position_cm": wandb.Image(position_cm)
+            })
             break  # 示例中只打印第一个批次
 
 if __name__ == '__main__':

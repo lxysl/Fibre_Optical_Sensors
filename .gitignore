@@ -1,3 +1,8 @@
+Data_sets/data.txt
+Data_sets/label.txt
+Data_sets/test_data.txt
+Data_sets/test_label.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

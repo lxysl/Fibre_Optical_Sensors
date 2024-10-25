@@ -116,8 +116,8 @@ class MultiTaskTransformer(nn.Module):
     )
     def forward(self, src):
         # src shape: (batch_size, seq_len, input_dim)
-        src = self.input_proj(src)  # (seq_len, batch_size, d_model)
-        src = src.permute(1, 0, 2)  # (seq_len, batch_size, input_dim)
+        src = self.input_proj(src)  # (batch_size, seq_len, d_model)
+        src = src.permute(1, 0, 2)  # (seq_len, batch_size, d_model)
         src = self.pos_encoder(src)
         src = src.permute(1, 0, 2)  # (batch_size, seq_len, d_model)
         output = self.transformer_encoder(src)
