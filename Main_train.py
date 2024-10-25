@@ -98,10 +98,10 @@ def main():
                 param_group['lr'] *= decay_rate
         # 调用 train_one_epoch 进行训练
         train_results = train_one_epoch(model, train_dataloader, criterion_position, criterion_force, optimizer, device)
-        train_loss, train_accuracy_direction, train_accuracy_position, train_mse_force = train_results
+        train_loss, train_accuracy_direction, train_accuracy_position, train_mse_force, train_mae_force = train_results
         # print(f'Epoch {epoch + 1} finished with loss: {train_results:.3f}')
         test_results = test_one_epoch(model, test_dataloader, criterion_position, criterion_force, device)
-        test_loss, test_accuracy_direction, test_accuracy_position, test_mse_force = test_results
+        test_loss, test_accuracy_direction, test_accuracy_position, test_mse_force, test_mae_force = test_results
         # print(f'Epoch {epoch + 1} finished with loss: {test_results:.3f}')
         # log the results to wandb
         wandb.log({
@@ -110,9 +110,11 @@ def main():
             "train_accuracy_direction": train_accuracy_direction,
             "train_accuracy_position": train_accuracy_position,
             "train_mse_force": train_mse_force,
+            "train_mae_force": train_mae_force,
             "test_accuracy_direction": test_accuracy_direction,
             "test_accuracy_position": test_accuracy_position,
-            "test_mse_force": test_mse_force
+            "test_mse_force": test_mse_force,
+            "test_mae_force": test_mae_force
         })
 
     # 保存模型

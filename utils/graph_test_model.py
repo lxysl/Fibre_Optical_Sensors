@@ -28,12 +28,13 @@ y_position_tensor = torch.from_numpy(y[:, 1]).long()
 y_force_tensor = torch.from_numpy(y[:,2]).float()
 
 # 创建数据集实例
-fbg_dataset = FBGDataset(x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor)
+fbg_dataset = FBGDataset(x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor, train=False)
 test_dataloader = DataLoader(fbg_dataset,batch_size=60,)
 # model = MultiTaskTransformer(input_dim = 2)
 model = PatchTST(num_classes_1=25, num_classes_2=24, configs=CONFIGS)
 # model = nn.DataParallel(model)
 model.to('cuda')
+torch.compile(model)
 
 def plot_confusion_matrix(y_true, y_pred, title):
     y_true = y_true.detach().cpu().numpy()
