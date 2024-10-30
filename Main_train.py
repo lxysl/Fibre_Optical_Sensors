@@ -12,17 +12,22 @@ from matplotlib import pyplot as plt
 
 from datas import FBGDataset, z_score_normalize_samplewise, min_max_normalize
 from models import FBGNet , MultiTaskTransformer, ResNet1D, PatchTST, CONFIGS
-from config import MODEL_SAVE_DIR, NUM_EPOCHS
 from train import train_one_epoch
 from test import test_one_epoch
 from utils import test_model
+from mixup import get_mixup_sample_rate
+
+
+MODEL_SAVE_DIR = "optical_fiber_checkpoints"
+DATA_DIR = "data/fbg_measurements"
+NUM_EPOCHS = 500
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1,2,3'
 # start a new wandb run to track this script
 wandb.init(
     project="Fibre_Optical_sensors",
     entity="chengjun_team",
-    notes="train-test-split-augmentation",
+    notes="c-mixup",
     config={
         "num_epochs": NUM_EPOCHS,
         "checkpoint_path": MODEL_SAVE_DIR,
@@ -77,6 +82,8 @@ def main():
     # 使用 DataLoader 创建数据加载器
     train_dataloader = DataLoader(fbg_train_dataset, batch_size=196, shuffle=True)
     test_dataloader = DataLoader(fbg_test_dataset, batch_size=196, shuffle=False)
+    # c-mixup
+    mixup_idx_sample_rate = get_mixup_sample_rate(mixtype='kde', kde_type='gaussian', kde_bandwidth=1, y=y_force_train, use_kde=True, show_process=False)
     # 实例化模型
     # model = MultiTaskTransformer(input_dim = 2)
     # model = ResNet1D(in_channels=2, base_filters=64, kernel_size=7, stride=3, groups=1, n_block=8, n_classes_1=25, n_classes_2=24)
@@ -88,7 +95,7 @@ def main():
     criterion_force = nn.SmoothL1Loss()  # 力的大小的回归损失
     optimizer = optim.AdamW(model.parameters(), lr=0.001)
     decay_rate = 0.2
-    decay_steps = [70, 140]
+    decay_steps = [150, 300]
 
     for epoch in range(arg.num_epochs):
         print(f"Epoch {epoch + 1}")
@@ -97,7 +104,7 @@ def main():
             for param_group in optimizer.param_groups:
                 param_group['lr'] *= decay_rate
         # 调用 train_one_epoch 进行训练
-        train_results = train_one_epoch(model, train_dataloader, criterion_position, criterion_force, optimizer, device)
+        train_results = train_one_epoch(model, train_dataloader, criterion_position, criterion_force, optimizer, device, mixup_idx_sample_rate)
         train_loss, train_accuracy_direction, train_accuracy_position, train_mse_force, train_mae_force = train_results
         # print(f'Epoch {epoch + 1} finished with loss: {train_results:.3f}')
         test_results = test_one_epoch(model, test_dataloader, criterion_position, criterion_force, device)

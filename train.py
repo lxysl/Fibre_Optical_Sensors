@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import time
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
@@ -9,7 +10,7 @@ from utils import time_calc
 from sklearn.metrics import accuracy_score, mean_squared_error, mean_absolute_error
 
 
-def train_one_epoch(model, dataloader, criterion_position, criterion_force, optimizer, device):
+def train_one_epoch(model, dataloader, criterion_position, criterion_force, optimizer, device, mixup_idx_sample_rate):
     model.train()  # 设置模型为训练模式
     running_loss = 0.0
     running_accuracy_direction = 0.0
@@ -20,16 +21,32 @@ def train_one_epoch(model, dataloader, criterion_position, criterion_force, opti
 
     # 遍历数据集的每一个批次
     for i, data in enumerate(dataloader, 0):
-        inputs, labels_direction, labels_position, labels_force = data
+        idx, inputs, labels_direction, labels_position, labels_force = data
         inputs, labels_direction, labels_position, labels_force = inputs.to(device), labels_direction.to(device), labels_position.to(device), labels_force.to(device)
+        # c-mixup
+        idx_2 = np.array([np.random.choice(np.arange(len(dataloader.dataset)), p=mixup_idx_sample_rate[sel_idx]) for sel_idx in idx])
+        data_2 = dataloader.dataset[idx_2]
+        idx_2, inputs_2, labels_direction_2, labels_position_2, labels_force_2 = data_2
+        inputs_2, labels_direction_2, labels_position_2, labels_force_2 = inputs_2.to(device), labels_direction_2.to(device), \
+                                                                          labels_position_2.to(device), labels_force_2.to(device)
+        # softlabel: c -> 1-hot
+        soft_labels_direction = F.one_hot(labels_direction, num_classes=25)
+        soft_labels_position = F.one_hot(labels_position, num_classes=24)
+        soft_labels_direction_2 = F.one_hot(labels_direction_2, num_classes=25)
+        soft_labels_position_2 = F.one_hot(labels_position_2, num_classes=24)
+        lambd = np.random.beta(1, 1)
+        mixed_inputs = lambd * inputs + (1 - lambd) * inputs_2
+        mixed_labels_direction = lambd * soft_labels_direction + (1 - lambd) * soft_labels_direction_2
+        mixed_labels_position = lambd * soft_labels_position + (1 - lambd) * soft_labels_position_2
+        mixed_labels_force = lambd * labels_force + (1 - lambd) * labels_force_2
         # 重置梯度
         optimizer.zero_grad()
         # 前向传播
-        outputs_direction, outputs_position, outputs_force = model(inputs)
+        outputs_direction, outputs_position, outputs_force = model(mixed_inputs)
         # 计算损失
-        loss_direction = criterion_position(outputs_direction, labels_direction)
-        loss_position = criterion_position(outputs_position, labels_position)
-        loss_force = criterion_force(outputs_force.squeeze(), labels_force)
+        loss_direction = criterion_position(outputs_direction, mixed_labels_direction)
+        loss_position = criterion_position(outputs_position, mixed_labels_position)
+        loss_force = criterion_force(outputs_force.squeeze(), mixed_labels_force)
         loss = 1.0 * loss_direction + 1.0 * loss_position + 1.0 * loss_force
         # 反向传播和优化
         loss.backward()

@@ -48,7 +48,7 @@ def plot_confusion_matrix(y_true, y_pred, title):
     return fig
 
 def test_model(data_loader, model, model_path):
-        for batch_idx, (inputs, label_direction, labels_position, labels_force) in enumerate(data_loader):
+        for batch_idx, (idx, inputs, label_direction, labels_position, labels_force) in enumerate(data_loader):
             print(f"Batch {batch_idx + 1}:")
             print("Inputs:", inputs.shape)
             # 加载模型参数

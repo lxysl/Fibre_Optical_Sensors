@@ -14,7 +14,7 @@ def test_one_epoch(model, dataloader, criterion_position, criterion_force, devic
     # 禁用梯度计算
     with torch.no_grad():
         for i, data in enumerate(dataloader, 0):
-            inputs, labels_direction, labels_position, labels_force = data
+            idx, inputs, labels_direction, labels_position, labels_force = data
             inputs, labels_direction, labels_position, labels_force = inputs.to(device), labels_direction.to(device), labels_position.to(device), labels_force.to(device)
         
              # 前向传播

@@ -32,7 +32,7 @@ class ComposeTransform:
 
 # 创建自定义数据集
 class FBGDataset(Dataset):
-    def __init__(self, x_tensor, y_direction_tensor ,y_position_tensor, y_force_tensor, train=True):
+    def __init__(self, x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor, train=True):
         self.x_tensor = x_tensor
         self.y_direction_tensor = y_direction_tensor
         self.y_position_tensor = y_position_tensor
@@ -49,7 +49,7 @@ class FBGDataset(Dataset):
         y_direction = self.y_direction_tensor[idx]
         y_position = self.y_position_tensor[idx]
         y_force = self.y_force_tensor[idx]
-        return x, y_direction, y_position, y_force
+        return idx, x, y_direction, y_position, y_force
     
 def z_score_normalize_samplewise(data):
     means = np.mean(data, axis=1,keepdims = True)  # 每个样本的均值
