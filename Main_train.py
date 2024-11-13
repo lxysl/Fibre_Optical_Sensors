@@ -22,7 +22,7 @@ from utils import test_model
 wandb.init(
     project="Fibre_Optical_sensors",
     entity="chengjun_team",
-    notes="train-test-split-augmentation",
+    notes="patchtst-v2",
     config={
         "num_epochs": NUM_EPOCHS,
         "checkpoint_path": MODEL_SAVE_DIR,

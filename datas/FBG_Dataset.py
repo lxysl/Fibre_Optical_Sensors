@@ -32,7 +32,7 @@ class ComposeTransform:
 
 # 创建自定义数据集
 class FBGDataset(Dataset):
-    def __init__(self, x_tensor, y_direction_tensor ,y_position_tensor, y_force_tensor, train=True):
+    def __init__(self, x_tensor, y_direction_tensor, y_position_tensor, y_force_tensor, train=True):
         self.x_tensor = x_tensor
         self.y_direction_tensor = y_direction_tensor
         self.y_position_tensor = y_position_tensor

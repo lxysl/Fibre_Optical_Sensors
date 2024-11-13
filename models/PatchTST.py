@@ -10,6 +10,7 @@ import numpy as np
 
 from .PatchTST_backbone import PatchTST_backbone
 from .PatchTST_layers import series_decomp
+from .basics import SigmoidRange
 
 
 CONFIGS = {
@@ -122,8 +123,9 @@ class PatchTST(nn.Module):
             nn.Flatten(),
             nn.Linear(c_in * target_window, mlp_dim),
             nn.GELU(),
-            nn.Dropout(mlp_dropout),
-            nn.Linear(mlp_dim, 1)
+            nn.Dropout(mlp_dropout), 
+            nn.Linear(mlp_dim, 1),
+            SigmoidRange(low=0, high=16)
         )
     
     
